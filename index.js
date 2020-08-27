@@ -31,6 +31,7 @@ function getElement(dom) {
     }
 
     scan.onclick = () => {
+      if(pokemon === "誰") return
       info.innerHTML = pokemon
       result.src = `./pokemon/${pokemon}.png`
     }
