@@ -2,7 +2,7 @@ name: Deploy to Amazon ECR
 
 on:
   pull_request:
-    types: [opened, reopened, edited]
+    types: [opened, reopened, edited, synchronize]
 
 env:
   AWS_REGION: "ap-northeast-2" # set this to your preferred AWS region, e.g. us-west-1
