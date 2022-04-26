@@ -9,7 +9,7 @@ on:
     #   - "production"
 
 jobs:
-  lighthouse:
+  lighthousesss:
     runs-on: ubuntu-latest
     strategy:
       matrix:
