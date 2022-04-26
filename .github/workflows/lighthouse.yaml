@@ -75,22 +75,22 @@ jobs:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
           TOKEN: dbfa25e10fb36693f325607b8fbead78baedaaf0
 
-      # - name: Format Lighthouse score
-      #   id: format-lighthouse-score
-      #   uses: actions/github-script@v6
-      #   with:
-      #     script: |
-      #       const lighthouseCommentMaker = require("./lighthouseCommentMaker.js");
-      #       const manifest = ${{ steps.lighthouse-check.outputs.manifest }}[0].summary;
-      #       const links = ${{ steps.lighthouse-check.outputs.links }};
+      - name: Format Lighthouse score
+        id: format-lighthouse-score
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const lighthouseCommentMaker = require("./lighthouseCommentMaker.js");
+            const manifest = ${{ steps.lighthouse-check.outputs.manifest }}[0].summary;
+            const links = ${{ steps.lighthouse-check.outputs.links }};
 
-      #       const comment = lighthouseCommentMaker(manifest, links);
-      #       core.setOutput("comment", comment);
+            const comment = lighthouseCommentMaker(manifest, links);
+            core.setOutput("comment", comment);
 
-      # - name: Add Lighthouse result as comment
-      #   uses: marocchino/sticky-pull-request-comment@v2
-      #   with:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     number: ${{ github.event.pull_request.number }}
-      #     header: Lighthouse
-      #     message: ${{ steps.format-lighthouse-score.outputs.comment }}
+      - name: Add Lighthouse result as comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          number: ${{ github.event.pull_request.number }}
+          header: Lighthouse
+          message: ${{ steps.format-lighthouse-score.outputs.comment }}
