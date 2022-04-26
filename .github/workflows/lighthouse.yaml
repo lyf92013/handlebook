@@ -9,81 +9,87 @@ on:
     #   - "production"
 
 jobs:
-  lighthousesss:
+  specific_review_requested:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [14.x]
+    if: ${{ github.event.requested_team.name == 'octo-team'}}
     steps:
-      - uses: actions/checkout@master
+      - run: echo 'A review from octo-team was requested'
+# jobs:
+#   lighthousesss:
+#     runs-on: ubuntu-latest
+#     strategy:
+#       matrix:
+#         node-version: [14.x]
+#     steps:
+#       - uses: actions/checkout@master
 
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v2
-        with:
-          node-version: ${{ matrix.node-version }}
+#       - name: Use Node.js ${{ matrix.node-version }}
+#         uses: actions/setup-node@v2
+#         with:
+#           node-version: ${{ matrix.node-version }}
 
-      - name: Install Yarn # for running ACT
-        run: npm i -g yarn
+#       - name: Install Yarn # for running ACT
+#         run: npm i -g yarn
 
-      - name: Cache npm packages
-        uses: actions/cache@v2
-        with:
-          path: "**/node_modules"
-          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-
+#       - name: Cache npm packages
+#         uses: actions/cache@v2
+#         with:
+#           path: "**/node_modules"
+#           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+#           restore-keys: |
+#             ${{ runner.os }}-
 
-      - name: Install Dependencies
-        run: yarn install --frozen-lockfile
+#       - name: Install Dependencies
+#         run: yarn install --frozen-lockfile
 
-      - if: ${{ github.event.pull_request.base.ref == 'refs/heads/master' }}
-        name: Build agric-kit Application for Lighthouse
-        run: yarn build:lhci
+#       - if: ${{ github.event.pull_request.base.ref == 'refs/heads/master' }}
+#         name: Build agric-kit Application for Lighthouse
+#         run: yarn build:lhci
 
-      - if: ${{ github.event.pull_request.base.ref == 'refs/heads/production' }}
-        name: Build agric-kit Application for Lighthouse
-        run: yarn build:lhci-production
+#       - if: ${{ github.event.pull_request.base.ref == 'refs/heads/production' }}
+#         name: Build agric-kit Application for Lighthouse
+#         run: yarn build:lhci-production
 
-      - if: ${{ github.event.pull_request.base.ref == 'refs/heads/master' }}
-        name: Lighthouse Check
-        id: lighthouse-check
-        uses: treosh/lighthouse-ci-action@v9
-        with:
-          configPath: "./lighthouserc.js"
-          uploadArtifacts: true
-          temporaryPublicStorage: true
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
-          TOKEN: 360896298955c2b1f716d237caa4f8108e2c9d8a
+#       - if: ${{ github.event.pull_request.base.ref == 'refs/heads/master' }}
+#         name: Lighthouse Check
+#         id: lighthouse-check
+#         uses: treosh/lighthouse-ci-action@v9
+#         with:
+#           configPath: "./lighthouserc.js"
+#           uploadArtifacts: true
+#           temporaryPublicStorage: true
+#         env:
+#           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+#           TOKEN: 360896298955c2b1f716d237caa4f8108e2c9d8a
 
-      - if: ${{ github.event.pull_request.base.ref == 'refs/heads/production' }}
-        name: Lighthouse Check
-        id: lighthouse-check
-        uses: treosh/lighthouse-ci-action@v9
-        with:
-          configPath: "./lighthouserc.js"
-          uploadArtifacts: true
-          temporaryPublicStorage: true
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
-          TOKEN: dbfa25e10fb36693f325607b8fbead78baedaaf0
+#       - if: ${{ github.event.pull_request.base.ref == 'refs/heads/production' }}
+#         name: Lighthouse Check
+#         id: lighthouse-check
+#         uses: treosh/lighthouse-ci-action@v9
+#         with:
+#           configPath: "./lighthouserc.js"
+#           uploadArtifacts: true
+#           temporaryPublicStorage: true
+#         env:
+#           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+#           TOKEN: dbfa25e10fb36693f325607b8fbead78baedaaf0
 
-      - name: Format Lighthouse score
-        id: format-lighthouse-score
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const lighthouseCommentMaker = require("./lighthouseCommentMaker.js");
-            const manifest = ${{ steps.lighthouse-check.outputs.manifest }}[0].summary;
-            const links = ${{ steps.lighthouse-check.outputs.links }};
+#       - name: Format Lighthouse score
+#         id: format-lighthouse-score
+#         uses: actions/github-script@v6
+#         with:
+#           script: |
+#             const lighthouseCommentMaker = require("./lighthouseCommentMaker.js");
+#             const manifest = ${{ steps.lighthouse-check.outputs.manifest }}[0].summary;
+#             const links = ${{ steps.lighthouse-check.outputs.links }};
 
-            const comment = lighthouseCommentMaker(manifest, links);
-            core.setOutput("comment", comment);
+#             const comment = lighthouseCommentMaker(manifest, links);
+#             core.setOutput("comment", comment);
 
-      - name: Add Lighthouse result as comment
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          number: ${{ github.event.pull_request.number }}
-          header: Lighthouse
-          message: ${{ steps.format-lighthouse-score.outputs.comment }}
+#       - name: Add Lighthouse result as comment
+#         uses: marocchino/sticky-pull-request-comment@v2
+#         with:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#           number: ${{ github.event.pull_request.number }}
+#           header: Lighthouse
+#           message: ${{ steps.format-lighthouse-score.outputs.comment }}
