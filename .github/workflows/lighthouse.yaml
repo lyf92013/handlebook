@@ -63,17 +63,17 @@ jobs:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
           TOKEN: 360896298955c2b1f716d237caa4f8108e2c9d8a
 
-      # - if: ${{ github.event.pull_request.base.ref == 'refs/heads/production' }}
-      #   name: Lighthouse Check
-      #   id: lighthouse-check
-      #   uses: treosh/lighthouse-ci-action@v9
-      #   with:
-      #     configPath: "./lighthouserc.js"
-      #     uploadArtifacts: true
-      #     temporaryPublicStorage: true
-      #   env:
-      #     LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
-      #     TOKEN: dbfa25e10fb36693f325607b8fbead78baedaaf0
+      - if: ${{ github.event.pull_request.base.ref == 'refs/heads/production' }}
+        name: Lighthouse Check
+        id: lighthouse-check
+        uses: treosh/lighthouse-ci-action@v9
+        with:
+          configPath: "./lighthouserc.js"
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+          TOKEN: dbfa25e10fb36693f325607b8fbead78baedaaf0
 
       # - name: Format Lighthouse score
       #   id: format-lighthouse-score
