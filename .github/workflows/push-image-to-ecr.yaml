@@ -10,9 +10,9 @@ env:
   ECR_WORKER_AGRI_REPOSITORY: "hypervisor-worker-agri" # set this to your Amazon ECR repository name
   NODE_VERSION: 16
 
-defaults:
-  run:
-    shell: bash
+# defaults:
+#   run:
+#     shell: bash
 
 jobs:
   test:
