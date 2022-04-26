@@ -4,9 +4,9 @@ on:
     types:
       - opened
       - reopened
-    branches:
-      - "master"
-      - "production"
+    # branches:
+    #   - "master"
+    #   - "production"
 
 jobs:
   lighthouse:
