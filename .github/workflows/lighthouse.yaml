@@ -40,12 +40,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-
 
-      # - name: Install Dependencies
-      #   run: yarn install --frozen-lockfile
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
 
-      # - if: ${{ github.event.pull_request.base.ref == 'refs/heads/master' }}
-      #   name: Build agric-kit Application for Lighthouse
-      #   run: yarn build:lhci
+      - if: ${{ github.event.pull_request.base.ref == 'refs/heads/master' }}
+        name: Build agric-kit Application for Lighthouse
+        run: yarn build:lhci
 
       # - if: ${{ github.event.pull_request.base.ref == 'refs/heads/production' }}
       #   name: Build agric-kit Application for Lighthouse
