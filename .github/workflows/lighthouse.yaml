@@ -65,7 +65,7 @@ jobs:
 
       - if: ${{ github.event.pull_request.base.ref == 'refs/heads/production' }}
         name: Lighthouse Check
-        id: lighthouse-check
+        id: lighthouse-checkss
         uses: treosh/lighthouse-ci-action@v9
         with:
           configPath: "./lighthouserc.js"
