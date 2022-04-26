@@ -1,0 +1,173 @@
+name: Deploy to Amazon ECR
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+env:
+  AWS_REGION: "ap-northeast-2" # set this to your preferred AWS region, e.g. us-west-1
+  ECR_MANAGER_REPOSITORY: "hypervisor-manager" # set this to your Amazon ECR repository name
+  ECR_WORKER_AGRI_REPOSITORY: "hypervisor-worker-agri" # set this to your Amazon ECR repository name
+  NODE_VERSION: 16
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    services:
+      redis:
+        image: redis:6-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 63790:6379
+
+      mqtt:
+        image: eclipse-mosquitto:2
+        ports:
+          - 1883:1883
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Setup NodeJS ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Yarn
+        run: npm install -g yarn
+
+      - uses: actions/cache@v2
+        id: yarn-cache
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
+        run: |
+          yarn install --frozen-lockfile
+
+      - name: E2E Test
+        env:
+          REDIS_HOST: localhost
+          REDIS_PORT: 63790
+          REDIS_DB: 2
+          MQTT_HOST: localhost
+          MQTT_PORT: 1883
+          HTTP_PORT: 3000
+          QUEUE_LOCKDURATION: 5000
+          QUEUE_STALLEDINTERVAL: 10000
+          QUEUE_MAXSTALLEDCOUNT: 10
+          QUEUE_DASHBOARD_USER: webduino
+          QUEUE_DASHBOARD_PASSWORD: 3388511
+          WORKER_NUM: 3
+        run: |
+          yarn test:e2e
+
+      - name: Upload Unit Test Results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: Unit Test Results (NodeJS ${{ env.NODE_VERSION }})
+          path: test.json
+
+  deploy:
+    if: ${{ github.ref == 'refs/heads/master' || github.ref == 'refs/heads/production' }}
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Setup NodeJS ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@master
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-buildx-
+
+      - name: Generate build ID
+        id: prep
+        run: |
+          branch=${GITHUB_REF##*/}
+          sha=${GITHUB_SHA::8}
+          ts=$(date +%s)
+          echo "::set-output name=MANAGER_BUILD_ID::${branch}-${sha}-${ts}"
+          echo "::set-output name=WORKER_BUILD_ID::${branch}-${sha}-${ts}"
+
+      - name: Build, tag, and push manager image to Amazon ECR
+        id: build-manager-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.prep.outputs.MANAGER_BUILD_ID }}
+        uses: docker/build-push-action@v2
+        with:
+          context: ./
+          file: ./docker/manager/dockerfile
+          builder: ${{ steps.buildx.outputs.name }}
+          push: true
+          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_MANAGER_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
+
+      - name: Build, tag, and push worker agri image to Amazon ECR
+        id: build-worker-agri-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.prep.outputs.WORKER_BUILD_ID }}
+        uses: docker/build-push-action@v2
+        with:
+          context: ./
+          file: ./docker/worker-agri/dockerfile
+          builder: ${{ steps.buildx.outputs.name }}
+          push: true
+          tags: ${{ env.ECR_REGISTRY }}/${{ env.ECR_WORKER_AGRI_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache
